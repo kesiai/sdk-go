@@ -1,55 +1,66 @@
 package tcp
 
 import (
-	"fmt"
+	"io"
+	"net"
 	"testing"
 	"time"
 )
 
 func Test_Read(t *testing.T) {
-	conn, err := DialTCP("tcp", "localhost", 8000)
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer conn.Close()
-
+	t.Cleanup(func() { listener.Close() })
+	done := make(chan error, 1)
 	go func() {
-		for i := 0; i < 100; i++ {
-			str := []byte(fmt.Sprintf("%d", i))
-			//写给服务器
-			_, err := conn.Write(str)
-			if err != nil {
-				t.Log("客户端发送数据失败：", err.Error())
-			} else {
-				t.Log("客户端发出的数据：", i)
-			}
-			time.Sleep(time.Second * 4)
-		}
-	}()
-
-	// 回显服务器回发的数据
-	buf := make([]byte, 4096)
-	j := 0
-	for {
-		j++
-		n, err := conn.Read(buf)
-		if n == 0 {
-			t.Log("检查到服务器关闭!")
-			time.Sleep(time.Second * 2)
-			continue
-			//return
-		}
+		conn, err := listener.Accept()
 		if err != nil {
-			t.Log("conn.Read err:", err)
-			time.Sleep(time.Second * 2)
-			//return
-		} else {
-			t.Log("客户端读到服务器回发：", string(buf[:n]))
+			done <- err
+			return
 		}
-		// 测试 Close()
-		//if j == 5 {
-		//	conn.Close()
-		//}
-
+		defer conn.Close()
+		if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
+			done <- err
+			return
+		}
+		_, err = io.Copy(conn, conn)
+		done <- err
+	}()
+	conn, err := DialTCP("tcp", "127.0.0.1", listener.Addr().(*net.TCPAddr).Port)
+	if err != nil {
+		t.Fatal(err)
+	}
+	closed := false
+	t.Cleanup(func() {
+		if !closed {
+			conn.Close()
+		}
+	})
+	if err := conn.SetDeadline(time.Now().Add(5 * time.Second)); err != nil {
+		t.Fatal(err)
+	}
+	want := "sdk-go echo"
+	if _, err := conn.Write([]byte(want)); err != nil {
+		t.Fatal(err)
+	}
+	buf := make([]byte, len(want))
+	if _, err := io.ReadFull(conn, buf); err != nil {
+		t.Fatal(err)
+	}
+	if string(buf) != want {
+		t.Fatalf("echo = %q, want %q", buf, want)
+	}
+	conn.Close()
+	closed = true
+	if _, err := conn.Write([]byte(want)); err == nil {
+		t.Fatal("Write after Close succeeded")
+	}
+	if _, err := conn.Read(buf); err == nil {
+		t.Fatal("Read after Close succeeded")
+	}
+	if err := <-done; err != nil {
+		t.Fatal(err)
 	}
 }

@@ -3,6 +3,7 @@ package rabbit
 import (
 	"fmt"
 
+	"github.com/felix-186/logger"
 	"github.com/rabbitmq/amqp091-go"
 )
 
