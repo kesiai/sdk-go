@@ -4,6 +4,8 @@ English | [Chinese](./README.md)
 
 IOT SDK Go is the Go SDK for building IOT extension services, including Driver, Algorithm, DataRelay, Flow, FlowExtension, Service, and Task modules.
 
+Source: [kesiai/sdk-go](https://github.com/kesiai/sdk-go). Published versions are listed under repository Tags.
+
 ## Table of Contents
 
 - [Module Overview](#module-overview)
@@ -12,6 +14,9 @@ IOT SDK Go is the Go SDK for building IOT extension services, including Driver, 
 - [Core Interfaces](#core-interfaces)
 - [Developing and Deploying Modules](#developing-and-deploying-modules)
 - [Driver Configuration Example](#driver-configuration-example)
+- [Configuration and Runtime Conventions](#configuration-and-runtime-conventions)
+- [Driver Reporting and Management APIs](#driver-reporting-and-management-apis)
+- [Development Checks](#development-checks)
 - [Example Projects](#example-projects)
 - [Packaging and Deployment](#packaging-and-deployment)
   - [License Library](#license-library)
@@ -42,27 +47,46 @@ go get github.com/kesiai/sdk-go
 ```go
 package main
 
-import "github.com/kesiai/sdk-go/driver"
+import (
+	"github.com/kesiai/sdk-go/driver"
+	exampledriver "github.com/kesiai/sdk-go/example/driver/app"
+)
 
 func main() {
 	app := driver.NewApp()
-	app.Start(yourDriver)
+	app.Start(new(exampledriver.TestDriver))
 }
 ```
 
-Run built-in examples:
+This uses the repository's MQTT example implementation. For your own driver, implement the complete `driver.Driver` interface below. First obtain the source and dependencies:
 
 ```bash
-go run ./example/driver -config ./example/driver/etc/
+git clone https://github.com/kesiai/sdk-go.git
+cd sdk-go
+go mod download
+```
+
+For an initial check without platform services, run the HTTP Service example in a separate terminal:
+
+```bash
+cd example/service
+go run .
+```
+
+Visit `http://localhost:9000/` for `hello world`; stop with `Ctrl+C`. For Task, change into `example/task` and run `go run .`. Its Cron expressions include seconds and have six fields.
+
+Run the other examples from the repository root after preparing reachable platform services and configuration:
+
+```bash
 go run ./example/algorithm -config ./example/algorithm/etc/
 go run ./example/data_relay -config ./example/data_relay/etc/
 go run ./example/flow -config ./example/flow/etc/
 go run ./example/flow_extension -config ./example/flow_extension/etc/
-go run ./example/service
-go run ./example/task
 ```
 
 ## Core Interfaces
+
+These are per-module interface excerpts. `App` refers to that module's App, and dependent types require the imports shown in source; do not combine all snippets into one Go file. See the module paths above and example directories below for parameter types and complete implementations.
 
 ### Driver
 
@@ -159,7 +183,7 @@ Each module starts with `NewApp().Start(implementation)`. Choose a module based 
 
 The Algorithm, DataRelay, Flow, and FlowExtension examples read `./etc/config.yaml` by default; use `--config` to select another config directory. Their gRPC `host/port` settings are **outbound** platform addresses, not listening ports. In a container, set them to platform service addresses reachable from that container.
 
-The Service and Task examples read `./etc/config.yaml` from the working directory and do not accept `--config`. Running them from the repository root, as shown above, uses SDK defaults. To load an example's config, change into `example/service` or `example/task` and run `go run .`. Service listens on `server.port`; Task has no listening port by default.
+Service and Task read `./etc/config.yaml` from the working directory during package initialization and do not accept `--config`. The file is required; a missing file causes a panic. Change into `example/service` or `example/task` and run `go run .`. Service listens on `server.port`; Task has no listening port by default.
 
 For platform deployment, package `service.yml`, the executable or Docker image, and any required `etc/config.yaml` for the target runtime. Use `GroupName: driver` for drivers and `GroupName: dataRelay` for data relays. Use `GroupName: server` when installing Algorithm, Flow, FlowExtension, HTTP Service, or Task as a regular service. Set `Name` to the installation package's service identifier and point `Command` to the executable in a native package. In a container package, `Service: None` means there is no incoming service. For an incoming HTTP endpoint, use `Internal` or `External` with `Path` and `Ports`. Native packages use different port fields.
 
@@ -232,7 +256,7 @@ http:
   port: 8080
 
 dataFile:
-  enable: true
+  enable: false
   path: ./data.json
 
 license: ./license
@@ -250,6 +274,57 @@ log:
   level: 4
   format: json
 ```
+
+This configuration uses platform gRPC startup. Replace the placeholders: `driver.id`, `project`, and `serviceId` must match the platform driver and running instance. Local file startup and licensing requirements are described below.
+
+## Configuration and Runtime Conventions
+
+- Driver, Algorithm, DataRelay, Flow, and FlowExtension use `--config <directory>` to select `config.yaml`. This does not change the working directory; `dataFile.path`, `license`, and resource paths remain relative to it.
+- Use one module App per executable. Configuration uses global Viper/pflag state; do not repeatedly construct multiple Apps in one process.
+- Driver and DataRelay support `mq.type` values `mqtt`, `rabbit`, `kafka`, and `local`. Local MQ stays inside the process, does not report to the platform, and does not disable the driver's device connections.
+- Driver's `mq.timeout`, `driverGrpc.waitTime/timeout`, `health.requestTime`, and `stream.heartbeat` use Go duration strings such as `5s` and `1m`. Algorithm's `algorithmGrpc.waitTime`, `health.requestTime`, and `algorithm.timeout` use integer seconds; do not copy Driver duration strings into them.
+- DataRelay requires `project`, `instanceId`, and `service.id/name`. Its current `NewApp()` reads etcd at `etcdConfig` even with `api.liteMode=true`; configure reachable etcd and API services.
+- Encrypted configuration uses `CONFIG_CIPHER_KEY`; see the [decrypt implementation](./utils/decrypt/config.go) for formats. Legacy `AES(...)` uses GCM in Go and CBC in Node.js, so the values cannot be exchanged directly. `ENC(...)` is Base64 encoding.
+
+Run the local MQTT Driver example with `go run .` from `example/driver`. Its checked-in configuration enables `dataFile` and HTTP and disables platform gRPC. Prepare `data.json`, the target platform's license library, and the device MQTT service first. `data.json` contains driver instance configuration, including `device`, `tables`, devices, and tags; it is separate from SDK `config.yaml`. For platform mode, disable `dataFile.enable`, enable `driverGrpc.enable`, and configure platform gRPC/MQ addresses. See [data.json](./example/driver/data.json) and the [MQTT script guide](./example/driver/README.md).
+
+## Driver Reporting and Management APIs
+
+Use `driver.App` inside a collection callback and handle the returned error:
+
+```go
+func report(ctx context.Context, app driver.App) error {
+	return app.WritePoints(ctx, entity.Point{
+		Table: "devices", ID: "sensor-1",
+		Fields: []entity.Field{{Tag: entity.Tag{ID: "temperature"}, Value: 23.5}},
+	})
+}
+```
+
+Import `context`, `github.com/kesiai/sdk-go/driver`, and `github.com/kesiai/sdk-go/driver/entity`. `Table` is the table identifier, `ID` the device identifier, and `Tag.ID` the tag identifier; they must match the model. `UnixTime` is a 13-digit millisecond timestamp and defaults to the current time. `WritePoints` accepts a field array and applies tag conversion. `SavePoints(ctx, table, *entity.WritePoint)` accepts a `Fields` map and saves directly without those conversions. Success does not guarantee platform persistence; local MQ does not verify platform delivery either.
+
+Other methods include `WriteEvent`, `WriteWarning`, `WriteWarningRecovery`, `FindDevice`, `GetCommands`, `UpdateCommand`, and `RunLog`. See the [App interface](./driver/app.go) and [entity definitions](./driver/entity). Events, device queries, commands, and other platform RPCs require a working gRPC connection; warnings and recovery use MQ. Return or log errors instead of silently losing data.
+
+With `http.enable`, `App.Start` registers and starts the HTTP server automatically:
+
+| Method | Path | Purpose |
+| --- | --- | --- |
+| GET | `/health`, `/info` | Process health and instance information |
+| GET | `/driver/schema`, `/driver/config` | Schema and local instance configuration file |
+| POST | `/driver/start` | Start with instance configuration, including license verification |
+| POST | `/driver/run`, `/driver/batch-run`, `/driver/write-tag`, `/driver/debug` | Commands, batch commands, tag writes, and debugging |
+| WebSocket | `/driver/ws?type=data&table=devices&device=sensor-1` | Filter data by table/device; use `type=status` for status |
+
+Register custom routes in `RegisterRoutes` under `/<driver.id>`. The HTTP routes do not implement application authentication; restrict management access through a gateway or access controls. A healthy `/health` response does not establish device connectivity or successful reporting. See the [HTTP implementation](./driver/http_server.go) and [Driver interface](./driver/driver.go) for HTTP and platform gRPC request shapes.
+
+## Development Checks
+
+```bash
+go test ./... -count=1 -timeout=60s
+go build ./...
+```
+
+Ordinary tests do not require etcd. To run [etcd integration tests](./etcd/etcd_test.go), set `SDK_GO_TEST_ETCD_ENDPOINTS` and optionally `SDK_GO_TEST_ETCD_USERNAME` and `SDK_GO_TEST_ETCD_PASSWORD`; without endpoints they are skipped. These tests write and clean temporary keys under `/sdk-go-test/`, so use a test instance. Also verify platform connectivity, configuration delivery, device data, commands, and shutdown against your target platform. Validate packaging on the target OS/architecture.
 
 ## Example Projects
 

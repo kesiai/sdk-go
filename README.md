@@ -4,6 +4,8 @@
 
 IOT SDK Go 是用于开发 IOT 平台扩展服务的 Go SDK，覆盖 Driver、Algorithm、DataRelay、Flow、FlowExtension、Service、Task。
 
+源码仓库：[kesiai/sdk-go](https://github.com/kesiai/sdk-go)。发布版本见仓库 Tags。
+
 ## 目录
 
 - [模块概览](#模块概览)
@@ -12,6 +14,9 @@ IOT SDK Go 是用于开发 IOT 平台扩展服务的 Go SDK，覆盖 Driver、Al
 - [核心接口](#核心接口)
 - [各模块开发与部署](#各模块开发与部署)
 - [Driver 配置示例](#driver-配置示例)
+- [配置与运行约定](#配置与运行约定)
+- [Driver 数据上报与管理接口](#driver-数据上报与管理接口)
+- [开发验证](#开发验证)
 - [示例目录](#示例目录)
 - [打包与部署](#打包与部署)
   - [授权动态库](#授权动态库)
@@ -42,27 +47,46 @@ go get github.com/kesiai/sdk-go
 ```go
 package main
 
-import "github.com/kesiai/sdk-go/driver"
+import (
+	"github.com/kesiai/sdk-go/driver"
+	exampledriver "github.com/kesiai/sdk-go/example/driver/app"
+)
 
 func main() {
 	app := driver.NewApp()
-	app.Start(yourDriver)
+	app.Start(new(exampledriver.TestDriver))
 }
 ```
 
-运行仓库示例：
+上面使用仓库中的 MQTT 示例实现；开发自己的驱动时，应实现下文完整的 `driver.Driver` 接口。先获取源码并下载依赖：
 
 ```bash
-go run ./example/driver -config ./example/driver/etc/
+git clone https://github.com/kesiai/sdk-go.git
+cd sdk-go
+go mod download
+```
+
+首次验证可运行不依赖平台的 HTTP Service 示例，在独立终端执行：
+
+```bash
+cd example/service
+go run .
+```
+
+访问 `http://localhost:9000/` 应返回 `hello world`，按 `Ctrl+C` 停止。Task 同样进入 `example/task` 后运行 `go run .`；Cron 表达式包含秒字段，共六段。
+
+其他示例可在仓库根目录运行；先准备可访问的平台服务和配置：
+
+```bash
 go run ./example/algorithm -config ./example/algorithm/etc/
 go run ./example/data_relay -config ./example/data_relay/etc/
 go run ./example/flow -config ./example/flow/etc/
 go run ./example/flow_extension -config ./example/flow_extension/etc/
-go run ./example/service
-go run ./example/task
 ```
 
 ## 核心接口
+
+以下为各模块接口摘录，`App` 指所在模块的 App，类型依赖需按源码导入，不能将全部片段拼接为同一个 Go 文件。参数结构和完整实现可从上方模块包路径及下方示例目录查看。
 
 ### Driver
 
@@ -159,7 +183,7 @@ type Task interface {
 
 Algorithm、DataRelay、Flow、FlowExtension 示例默认读取 `./etc/config.yaml`，也可用 `--config` 指定配置目录。表中的 gRPC `host/port` 是程序**主动连接**的平台地址，不是程序监听的端口。部署到容器时，应将这些地址改为容器可访问的平台服务地址。
 
-Service、Task 示例读取当前工作目录的 `./etc/config.yaml`，不使用 `--config` 参数。上文从仓库根目录运行这两个示例时会使用 SDK 默认配置；要加载示例里的配置，请进入各自的 `example/service` 或 `example/task` 目录后执行 `go run .`。Service 的 `server.port` 是实际监听端口；Task 默认不监听端口。
+Service、Task 在包初始化时读取当前工作目录的 `./etc/config.yaml`，不使用 `--config` 参数。配置文件必须存在，缺失会 panic；请进入各自的 `example/service` 或 `example/task` 目录后执行 `go run .`。Service 的 `server.port` 是实际监听端口；Task 默认不监听端口。
 
 发布到平台时，按目标运行模式准备 `service.yml`、可执行文件或 Docker 镜像，以及运行所需的 `etc/config.yaml`。驱动使用 `GroupName: driver`，数据中继使用 `GroupName: dataRelay`；算法、流程、流程扩展、HTTP 服务和定时任务作为普通服务安装时使用 `GroupName: server`。`Name` 填服务的安装包标识，原生包的 `Command` 指向实际可执行文件。容器包用 `Service: None` 表示没有入站服务；提供 HTTP 等入站接口时用 `Internal` 或 `External`，并填写 `Path` 和 `Ports`。这些字段与原生包的端口字段不同。
 
@@ -232,7 +256,7 @@ http:
   port: 8080
 
 dataFile:
-  enable: true
+  enable: false
   path: ./data.json
 
 license: ./license
@@ -250,6 +274,57 @@ log:
   level: 4
   format: json
 ```
+
+上例采用平台 gRPC 启动模式。`driver.id`、`project`、`serviceId` 应与平台中的驱动和运行实例对应；占位值不能用于真实连接。本地文件模式及授权要求见下文。
+
+## 配置与运行约定
+
+- Driver、Algorithm、DataRelay、Flow、FlowExtension 使用 `--config <目录>` 选择 `config.yaml`；该参数不会改变进程工作目录。`dataFile.path`、`license` 和资源路径仍相对工作目录解析。
+- 每个可执行程序使用一个模块的 App。配置使用全局 Viper/pflag，不应在同一进程反复调用多个 `NewApp()`。
+- Driver、DataRelay 的 `mq.type` 支持 `mqtt`、`rabbit`、`kafka`、`local`。`local` 仅在进程内传递消息，不向平台上报，也不会关闭驱动自身的设备连接。
+- Driver 的 `mq.timeout`、`driverGrpc.waitTime/timeout`、`health.requestTime`、`stream.heartbeat` 使用 `5s`、`1m` 等 Go duration 字符串。Algorithm 的 `algorithmGrpc.waitTime`、`health.requestTime` 和 `algorithm.timeout` 为整数秒，不能直接复制 Driver 的时长字段。
+- DataRelay 需要 `project`、`instanceId`、`service.id/name`；当前 `NewApp()` 会读取 `etcdConfig` 指向的 etcd 配置，即使 `api.liteMode=true` 也不能省略这一步。需配置可访问的 etcd 和 API 服务。
+- 加密配置使用 `CONFIG_CIPHER_KEY`，具体格式见 [decrypt 实现](./utils/decrypt/config.go)。Go 的旧格式 `AES(...)` 使用 GCM，Node.js SDK 使用 CBC，不能直接互换；`ENC(...)` 是 Base64 编码。
+
+本地 MQTT Driver 示例从 `example/driver` 目录执行 `go run .`。其现有配置开启 `dataFile` 和 HTTP，关闭平台 gRPC；先准备 `data.json`、匹配平台的授权动态库和设备 MQTT 服务。`data.json` 是驱动实例配置，包含 `device`、`tables`、设备及数据点定义，不是 SDK 的 `config.yaml`。平台模式应关闭 `dataFile.enable`，开启 `driverGrpc.enable` 并配置平台 gRPC/MQ 地址。完整的本地数据结构见 [data.json](./example/driver/data.json) 和 [MQTT 脚本说明](./example/driver/README.md)。
+
+## Driver 数据上报与管理接口
+
+在驱动的采集回调中使用 `driver.App` 上报，始终处理返回错误：
+
+```go
+func report(ctx context.Context, app driver.App) error {
+	return app.WritePoints(ctx, entity.Point{
+		Table: "devices", ID: "sensor-1",
+		Fields: []entity.Field{{Tag: entity.Tag{ID: "temperature"}, Value: 23.5}},
+	})
+}
+```
+
+该函数需导入 `context`、`github.com/kesiai/sdk-go/driver` 和 `github.com/kesiai/sdk-go/driver/entity`。`Table` 为表标识，`ID` 为设备编号，`Tag.ID` 为数据点标识，需与模型一致。`UnixTime` 为 13 位毫秒时间戳，省略时使用当前时间。`WritePoints` 接受字段数组并执行点位转换；`SavePoints(ctx, table, *entity.WritePoint)` 接受 `Fields` 映射并直接保存，不执行同一套点位转换。两者均不以返回成功作为平台已持久化的保证；`local` MQ 也不验证平台接收。
+
+其他能力包括 `WriteEvent`、`WriteWarning`、`WriteWarningRecovery`、`FindDevice`、`GetCommands`、`UpdateCommand` 和 `RunLog`，参数见 [App 接口](./driver/app.go) 与 [实体定义](./driver/entity)。事件、设备查询、指令等平台 RPC 需要有效的 gRPC 连接；告警及恢复通过 MQ 发布。接口错误应返回或记录，避免静默丢数。
+
+启用 `http.enable` 后，`App.Start` 自动注册并启动 HTTP 服务：
+
+| 方法 | 路径 | 用途 |
+| --- | --- | --- |
+| GET | `/health`、`/info` | 进程健康与实例信息 |
+| GET | `/driver/schema`、`/driver/config` | Schema 与本地实例配置文件 |
+| POST | `/driver/start` | 提交实例配置并启动驱动，经过授权校验 |
+| POST | `/driver/run`、`/driver/batch-run`、`/driver/write-tag`、`/driver/debug` | 指令、批量指令、写点与调试 |
+| WebSocket | `/driver/ws?type=data&table=devices&device=sensor-1` | 按表和设备订阅数据；`type=status` 订阅状态 |
+
+自定义路由在 `RegisterRoutes` 中注册，前缀为 `/<driver.id>`。HTTP 路由本身未提供业务鉴权，部署时应由网关或访问控制限制管理接口访问；`/health` 成功仅说明 HTTP 进程可用，不代表设备已连接或数据已上报。HTTP API 与平台 gRPC 的请求格式见 [HTTP 实现](./driver/http_server.go) 和 [Driver 接口](./driver/driver.go)。
+
+## 开发验证
+
+```bash
+go test ./... -count=1 -timeout=60s
+go build ./...
+```
+
+普通测试不要求本地安装 etcd；[etcd 集成测试](./etcd/etcd_test.go) 需显式设置 `SDK_GO_TEST_ETCD_ENDPOINTS`，可选 `SDK_GO_TEST_ETCD_USERNAME`、`SDK_GO_TEST_ETCD_PASSWORD`，未设置端点时跳过。集成测试会在 `/sdk-go-test/` 下读写并清理临时键，应使用测试实例。单元测试通过后，还需在目标平台验证连接、配置下发、设备数据、指令和停止清理；打包命令需在目标系统/架构实际核验。
 
 ## 示例目录
 
