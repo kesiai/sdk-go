@@ -23,18 +23,18 @@ IOT SDK Go is the Go SDK for building IOT extension services, including Driver, 
 
 | Module | Package | Description |
 | --- | --- | --- |
-| Driver | `github.com/felix-186/sdk-go/driver` | Device access, point/event/warning reporting, command handling |
-| Algorithm | `github.com/felix-186/sdk-go/algorithm` | Algorithm service |
-| DataRelay | `github.com/felix-186/sdk-go/data_relay` | Data relay and proxy |
-| Flow | `github.com/felix-186/sdk-go/flow` | Flow node logic |
-| FlowExtension | `github.com/felix-186/sdk-go/flow_extension` | Configurable flow extension |
-| Service | `github.com/felix-186/sdk-go/service` | Gin HTTP service |
-| Task | `github.com/felix-186/sdk-go/task` | Cron task runner |
+| Driver | `github.com/kesiai/sdk-go/driver` | Device access, point/event/warning reporting, command handling |
+| Algorithm | `github.com/kesiai/sdk-go/algorithm` | Algorithm service |
+| DataRelay | `github.com/kesiai/sdk-go/data_relay` | Data relay and proxy |
+| Flow | `github.com/kesiai/sdk-go/flow` | Flow node logic |
+| FlowExtension | `github.com/kesiai/sdk-go/flow_extension` | Configurable flow extension |
+| Service | `github.com/kesiai/sdk-go/service` | Gin HTTP service |
+| Task | `github.com/kesiai/sdk-go/task` | Cron task runner |
 
 ## Install
 
 ```bash
-go get github.com/felix-186/sdk-go
+go get github.com/kesiai/sdk-go
 ```
 
 ## Quick Start
@@ -42,7 +42,7 @@ go get github.com/felix-186/sdk-go
 ```go
 package main
 
-import "github.com/felix-186/sdk-go/driver"
+import "github.com/kesiai/sdk-go/driver"
 
 func main() {
 	app := driver.NewApp()

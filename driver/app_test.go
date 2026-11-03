@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/felix-186/sdk-go/driver/entity"
+	"github.com/kesiai/sdk-go/driver/entity"
 	"github.com/spf13/viper"
 )
 

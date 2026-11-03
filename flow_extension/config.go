@@ -5,7 +5,7 @@ import (
 	"encoding/hex"
 
 	apiConfig "github.com/felix-186/api-client-go/config"
-	"github.com/felix-186/sdk-go/etcd"
+	"github.com/kesiai/sdk-go/etcd"
 
 	"github.com/felix-186/logger"
 	"google.golang.org/grpc/metadata"

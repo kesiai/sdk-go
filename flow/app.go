@@ -16,7 +16,7 @@ import (
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 
-	"github.com/felix-186/sdk-go/utils/decrypt"
+	"github.com/kesiai/sdk-go/utils/decrypt"
 )
 
 type App interface {

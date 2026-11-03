@@ -13,7 +13,7 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/felix-186/sdk-go/service"
+	"github.com/kesiai/sdk-go/service"
 )
 
 // TestService 定义测试接口结构体

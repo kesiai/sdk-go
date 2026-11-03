@@ -1,8 +1,8 @@
 package main
 
 import (
-	"github.com/felix-186/sdk-go/driver"
-	"github.com/felix-186/sdk-go/example/driver/app"
+	"github.com/kesiai/sdk-go/driver"
+	"github.com/kesiai/sdk-go/example/driver/app"
 )
 
 func main() {

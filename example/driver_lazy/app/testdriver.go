@@ -12,9 +12,9 @@ import (
 	pb "github.com/felix-186/api-client-go/driver"
 	"github.com/felix-186/json"
 	"github.com/felix-186/logger"
-	"github.com/felix-186/sdk-go/driver"
-	"github.com/felix-186/sdk-go/driver/entity"
 	"github.com/gin-gonic/gin"
+	"github.com/kesiai/sdk-go/driver"
+	"github.com/kesiai/sdk-go/driver/entity"
 )
 
 // 驱动配置信息，不同的驱动生成不同的配置信息

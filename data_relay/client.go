@@ -15,7 +15,7 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 
 	pb "github.com/felix-186/api-client-go/datarelay"
-	dGrpc "github.com/felix-186/sdk-go/data_relay/grpc"
+	dGrpc "github.com/kesiai/sdk-go/data_relay/grpc"
 )
 
 type Client struct {

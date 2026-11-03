@@ -3,9 +3,9 @@ package driver
 import (
 	apiConfig "github.com/felix-186/api-client-go/config"
 	"github.com/felix-186/logger"
-	"github.com/felix-186/sdk-go/conn/mq"
-	"github.com/felix-186/sdk-go/driver/grpc"
-	"github.com/felix-186/sdk-go/etcd"
+	"github.com/kesiai/sdk-go/conn/mq"
+	"github.com/kesiai/sdk-go/driver/grpc"
+	"github.com/kesiai/sdk-go/etcd"
 )
 
 // Cfg 全局配置(需要先执行MustLoad，否则拿不到配置)

@@ -8,7 +8,7 @@ import (
 	"strconv"
 
 	"github.com/felix-186/logger"
-	"github.com/felix-186/sdk-go/algorithm"
+	"github.com/kesiai/sdk-go/algorithm"
 )
 
 var _ algorithm.Service = &TestAlgorithm{}

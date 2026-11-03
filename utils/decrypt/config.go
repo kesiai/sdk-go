@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/duke-git/lancet/v2/cryptor"
-	"github.com/felix-186/sdk-go/utils/cipherx"
+	"github.com/kesiai/sdk-go/utils/cipherx"
 )
 
 const (

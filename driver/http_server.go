@@ -16,7 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 
-	"github.com/felix-186/sdk-go/driver/entity"
+	"github.com/kesiai/sdk-go/driver/entity"
 )
 
 // initRouter 初始化 gin Router

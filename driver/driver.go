@@ -7,7 +7,7 @@ import (
 	pb "github.com/felix-186/api-client-go/driver"
 	"github.com/gin-gonic/gin"
 
-	"github.com/felix-186/sdk-go/driver/entity"
+	"github.com/kesiai/sdk-go/driver/entity"
 )
 
 // Driver 驱动接口，定义了驱动实现必须实现的方法

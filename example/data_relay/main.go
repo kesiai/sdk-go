@@ -2,8 +2,8 @@ package main
 
 import (
 	"context"
-	"github.com/felix-186/sdk-go/data_relay"
-	"github.com/felix-186/sdk-go/example/data_relay/app"
+	"github.com/kesiai/sdk-go/data_relay"
+	"github.com/kesiai/sdk-go/example/data_relay/app"
 )
 
 func main() {

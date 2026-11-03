@@ -3,9 +3,9 @@ package data_relay
 import (
 	grpcConfig "github.com/felix-186/api-client-go/config"
 	"github.com/felix-186/logger"
-	"github.com/felix-186/sdk-go/conn/mq"
-	"github.com/felix-186/sdk-go/data_relay/grpc"
-	"github.com/felix-186/sdk-go/etcd"
+	"github.com/kesiai/sdk-go/conn/mq"
+	"github.com/kesiai/sdk-go/data_relay/grpc"
+	"github.com/kesiai/sdk-go/etcd"
 )
 
 // Cfg 全局配置(需要先执行MustLoad，否则拿不到配置)

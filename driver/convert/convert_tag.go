@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/felix-186/sdk-go/driver/entity"
+	"github.com/kesiai/sdk-go/driver/entity"
 	"github.com/shopspring/decimal"
 )
 

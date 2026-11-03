@@ -13,8 +13,8 @@ import (
 	"syscall"
 
 	"github.com/felix-186/logger"
-	"github.com/felix-186/sdk-go/utils/decrypt"
 	"github.com/google/uuid"
+	"github.com/kesiai/sdk-go/utils/decrypt"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
 )

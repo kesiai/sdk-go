@@ -12,8 +12,8 @@ import (
 	"github.com/felix-186/api-client-go/config"
 	"github.com/felix-186/errors"
 	"github.com/felix-186/json"
-	"github.com/felix-186/sdk-go/driver/entity"
-	"github.com/felix-186/sdk-go/utils/serial"
+	"github.com/kesiai/sdk-go/driver/entity"
+	"github.com/kesiai/sdk-go/utils/serial"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -21,7 +21,7 @@ import (
 	api "github.com/felix-186/api-client-go/api"
 	pb "github.com/felix-186/api-client-go/driver"
 	"github.com/felix-186/logger"
-	dGrpc "github.com/felix-186/sdk-go/driver/grpc"
+	dGrpc "github.com/kesiai/sdk-go/driver/grpc"
 )
 
 type Client struct {

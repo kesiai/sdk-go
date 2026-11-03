@@ -23,18 +23,18 @@ IOT SDK Go 是用于开发 IOT 平台扩展服务的 Go SDK，覆盖 Driver、Al
 
 | 模块 | 包路径 | 说明 |
 | --- | --- | --- |
-| Driver | `github.com/felix-186/sdk-go/driver` | 设备接入、点位/事件/告警上报、指令执行 |
-| Algorithm | `github.com/felix-186/sdk-go/algorithm` | 算法服务 |
-| DataRelay | `github.com/felix-186/sdk-go/data_relay` | 数据中继 |
-| Flow | `github.com/felix-186/sdk-go/flow` | 流程节点 |
-| FlowExtension | `github.com/felix-186/sdk-go/flow_extension` | 可配置流程扩展 |
-| Service | `github.com/felix-186/sdk-go/service` | Gin HTTP 服务 |
-| Task | `github.com/felix-186/sdk-go/task` | Cron 定时任务 |
+| Driver | `github.com/kesiai/sdk-go/driver` | 设备接入、点位/事件/告警上报、指令执行 |
+| Algorithm | `github.com/kesiai/sdk-go/algorithm` | 算法服务 |
+| DataRelay | `github.com/kesiai/sdk-go/data_relay` | 数据中继 |
+| Flow | `github.com/kesiai/sdk-go/flow` | 流程节点 |
+| FlowExtension | `github.com/kesiai/sdk-go/flow_extension` | 可配置流程扩展 |
+| Service | `github.com/kesiai/sdk-go/service` | Gin HTTP 服务 |
+| Task | `github.com/kesiai/sdk-go/task` | Cron 定时任务 |
 
 ## 安装
 
 ```bash
-go get github.com/felix-186/sdk-go
+go get github.com/kesiai/sdk-go
 ```
 
 ## 快速开始
@@ -42,7 +42,7 @@ go get github.com/felix-186/sdk-go
 ```go
 package main
 
-import "github.com/felix-186/sdk-go/driver"
+import "github.com/kesiai/sdk-go/driver"
 
 func main() {
 	app := driver.NewApp()

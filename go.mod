@@ -1,4 +1,4 @@
-module github.com/felix-186/sdk-go
+module github.com/kesiai/sdk-go
 
 go 1.25.0
 
